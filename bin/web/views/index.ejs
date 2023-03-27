@@ -28,14 +28,12 @@
             border: 1px solid rgba(0, 0, 0, 0.2);
             padding: 20px;
             outline: none;
-            flex-grow: 1;
-            font-size: 14px;
             box-sizing: border-box;
             background: white;
-        }
-        
-        #input:focus {
-            outline: none;
+            resize: none;
+            width: 100%;
+            height: auto;
+            font-family: inherit;
         }
         
         #input:empty:before {
@@ -312,7 +310,7 @@
         </div>
         <div class='input-container'>
             <div class='input-field'>
-                <div contenteditable id='input' placeholder="test"></div>
+                <textarea id='input' rows="1"></textarea>
                 <button id='prompt-run'>Go</button>
                 <button id="prompt-cancel" class='hidden'><i class="fa-solid fa-circle-notch fa-spin"></i> Cancel</button>
             </div>
@@ -423,9 +421,9 @@ ${fields}
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             e.stopPropagation()
-            if (input.textContent) {
+            if (input.value) {
                 //config.prompt = input.textContent.replaceAll("\n", "\\n");
-                config.prompt = showPromptCheckbox.checked ? input.textContent : config.selectedPromptValue.replace('>PROMPT', input.textContent) || input.textContent;
+                config.prompt = showPromptCheckbox.checked ? input.value : config.selectedPromptValue.replace('>PROMPT', input.value) || input.value;
                 config.id = "TS-" + Date.now() + "-" + Math.floor(Math.random() * 100000)
                 document.querySelector("#prompt-run").classList.add("hidden")
                 document.querySelector("#prompt-cancel").classList.remove("hidden")
@@ -433,16 +431,23 @@ ${fields}
                 localStorage.setItem("config", JSON.stringify(config))
                 socket.emit('request', config)
                 config.id = null
-                loading(config.prompt, input.textContent)
+                loading(config.prompt, input.value)
                 updateInputToPrompt()
             }
         });
+        const adjustInputHeight = () => {
+            input.style.height = 'auto';
+            input.style.height = input.scrollHeight + 'px';
+        }
         input.addEventListener("keydown", (e) => {
+            adjustInputHeight()
+
             if (e.keyCode === 13 && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
                 form.requestSubmit()
             }
         })
+
         document.querySelector("#prompt-cancel").addEventListener("click", (e) => {
             e.preventDefault()
             e.stopPropagation()
@@ -493,7 +498,7 @@ ${fields}
                 endpattern
             } = rawTemplateToObj(promptSelect.value)
                 // const selectedPromptValue = promptSelect.value;
-            const currentInputValue = input.textContent;
+            const currentInputValue = input.value;
 
             config = {
                 ...config,
@@ -503,7 +508,7 @@ ${fields}
                 endpattern
             }
 
-            input.textContent = selectedPromptValue; // Update input to be value if given one to replace
+            input.value = selectedPromptValue; // Update input to be value if given one to replace
 
             input.setAttribute('placeholder', placeholder || "")
             document.getElementById("prompt-run").textContent = gotext || "Go"
@@ -511,26 +516,25 @@ ${fields}
 
             if (showPromptCheckbox.checked) {
                 // Move the cursor to the first instance of ">PROMPT" and select only the word ">PROMPT"
-                const promptIndex = input.textContent.indexOf('>PROMPT');
+                const promptIndex = input.value.indexOf('>PROMPT');
                 if (promptIndex >= 0) {
                     const range = document.createRange();
                     const selection = window.getSelection();
                     let promptEndIndex
                         // Replace the >PROMPT value if provided
                     if (promptValue) {
-                        input.textContent = selectedPromptValue.replace('>PROMPT', promptValue);
+                        input.value = selectedPromptValue.replace('>PROMPT', promptValue);
                         promptEndIndex = promptIndex + promptValue.length;
                     } else {
                         promptEndIndex = promptIndex + ">PROMPT".length;
                     }
-                    range.setStart(input.childNodes[0], promptIndex);
-                    range.setEnd(input.childNodes[0], promptEndIndex);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
+                    input.setSelectionRange(promptIndex, promptEndIndex);
                 }
             } else {
-                input.textContent = ""
+                input.value = ""
             }
+
+            adjustInputHeight()
 
             // Focus the input
             input.focus();
@@ -605,7 +609,8 @@ ${fields}
                 const defaultPrompt = prompts.find(prompt => prompt.name.toLowerCase() === 'default (alpaca)');
                 const initialPrompt = defaultPrompt || prompts[0];
                 promptSelect.value = initialPrompt.value;
-                input.textContent = initialPrompt.value;
+                input.value = initialPrompt.value;
+                adjustInputHeight()
 
                 promptSelect.addEventListener('change', () => updateInputToPrompt());
                 resetButton.addEventListener('click', (e) => {
@@ -632,9 +637,9 @@ ${fields}
 
         showPromptCheckbox.addEventListener('change', function() {
             if (showPromptCheckbox.checked) {
-                updateInputToPrompt(input.textContent)
+                updateInputToPrompt(input.value)
             } else {
-                input.textContent = ''
+                input.value = ''
             }
         });
 
